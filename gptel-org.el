@@ -40,6 +40,7 @@
 (defvar gptel-max-tokens)
 (defvar gptel--link-type-cache)
 (defvar gptel--preset)
+(defvar gptel--session-id)
 
 (defvar org-link-angle-re)
 (defvar org-link-bracket-re)
@@ -585,6 +586,8 @@ ARGS are the original function call arguments."
         (progn
           (when-let* ((bounds (org-entry-get (point-min) "GPTEL_BOUNDS")))
             (gptel--restore-props (read bounds)))
+          (when-let* ((session-id (org-entry-get (point-min) "GPTEL_SESSION_ID")))
+            (setq-local gptel--session-id session-id))
           (pcase-let ((`(,presets ,system ,backend ,model ,temperature ,tokens ,num ,tools)
                        (gptel-org--entry-properties (point-min))))
             (dolist (preset presets)
@@ -681,6 +684,10 @@ send in queries.  (See `gptel--num-messages-to-send' for the last one.)"
    (when (org-at-heading-p)
      (org-open-line 1))
    (gptel-org-set-properties (point-min))
+   ;; Save the backend session ID
+   (if gptel--session-id
+       (org-entry-put (point-min) "GPTEL_SESSION_ID" gptel--session-id)
+     (org-entry-delete (point-min) "GPTEL_SESSION_ID"))
    ;; Save response boundaries
    (letrec ((write-bounds
              (lambda (attempts)

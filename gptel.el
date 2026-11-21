@@ -76,6 +76,7 @@
 ;; - For PrivateGPT: define a backend with `gptel-make-privategpt'.
 ;; - For Perplexity: define a backend with `gptel-make-perplexity'.
 ;; - For Deepseek: define a backend with `gptel-make-deepseek'.
+;; - For OpenCode: define a backend with `gptel-make-opencode'.
 ;; - For Kagi: define a gptel-backend with `gptel-make-kagi'.
 ;;
 ;; For local models using Ollama, Llama.cpp or GPT4All:
@@ -408,6 +409,14 @@ configuration that might require a UI update.")
 
 (defvar-local gptel--bounds nil)
 (put 'gptel--bounds 'safe-local-variable #'listp)
+
+(defvar-local gptel--session-id nil
+  "Stable identifier for the current gptel conversation.
+
+Backends that need conversation affinity, such as for provider-side
+caching or sticky routing, can use this ID.  It is persisted with
+the rest of the chat state when the buffer is saved.")
+(put 'gptel--session-id 'safe-local-variable #'stringp)
 
 (defvar gptel--preset nil
   "Name of last applied gptel preset.
@@ -764,7 +773,9 @@ Additional metadata is stored only if no preset was applied or if it
 differs from the preset specification.  This is limited to the active
 gptel model and backend names, the system message, active tools, the
 response temperature, max tokens and number of conversation turns to
-send in queries.  (See `gptel--num-messages-to-send' for the last one.)"
+send in queries.  (See `gptel--num-messages-to-send' for the last one.)
+
+The backend session ID is saved as well if it is set."
   (run-hooks 'gptel-save-state-hook)
   (if (derived-mode-p 'org-mode)
       (progn
@@ -814,6 +825,10 @@ send in queries.  (See `gptel--num-messages-to-send' for the last one.)"
               (add-file-local-variable 'gptel--num-messages-to-send
                                        gptel--num-messages-to-send)
             (delete-file-local-variable 'gptel--num-messages-to-send))
+          ;; Session ID
+          (if gptel--session-id
+              (add-file-local-variable 'gptel--session-id gptel--session-id)
+            (delete-file-local-variable 'gptel--session-id))
           (add-file-local-variable 'gptel--bounds (gptel--get-buffer-bounds)))))))
 
 

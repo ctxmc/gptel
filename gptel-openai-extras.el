@@ -391,20 +391,16 @@ ENDPOINT and MODELS are all optional; for their meanings, see
                               (:copier nil)
                               (:constructor gptel--make-opencode)))
 
-(defvar-local gptel--opencode-session nil
-  "OpenCode session ID for the current gptel conversation.
-
-OpenCode Go uses this ID, sent in the `x-opencode-session' header,
-to route requests from the same conversation consistently.")
+(defvar gptel--session-id)
 
 (defun gptel--opencode-session-id (info)
   "Return the OpenCode session ID for the request described by INFO.
 
-The ID is generated once per gptel buffer, so all requests in a
-conversation share it."
+The ID is stored in `gptel--session-id', so it is generated once per
+gptel conversation and reused when the saved chat is restored."
   (with-current-buffer (plist-get info :buffer)
-    (or gptel--opencode-session
-        (setq gptel--opencode-session
+    (or gptel--session-id
+        (setq gptel--session-id
               (format "ses_%s" (md5 (format "%s%s%s"
                                             (buffer-name)
                                             (float-time)
@@ -609,7 +605,9 @@ For the keys and their meanings, see `gptel--openai-models'.")
 This provides access to OpenCode Go and OpenCode Console
 (pay-as-you-go) models through the OpenAI Chat Completions API.
 Requests include the `x-opencode-session' header required by
-OpenCode Go, with a stable session ID for each gptel buffer.
+OpenCode Go, with a stable session ID for each gptel conversation.
+The ID is saved with the chat state and reused when the saved chat
+is restored.
 
 Keyword arguments:
 
